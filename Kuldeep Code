@@ -1,0 +1,822 @@
+import { useState, useEffect, useRef } from "react";
+
+const C = {
+  bg:      "#07090F",
+  surface: "#0E1320",
+  card:    "#131B2E",
+  border:  "#1C2940",
+  accent:  "#3DEFE9",
+  purple:  "#8B5CF6",
+  green:   "#22C55E",
+  red:     "#F43F5E",
+  amber:   "#F59E0B",
+  pink:    "#EC4899",
+  text:    "#EEF2FF",
+  sub:     "#94A3B8",
+  muted:   "#3D4F6B",
+};
+
+const css = `
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&family=DM+Mono:wght@400;500&display=swap');
+
+*, *::before, *::after {
+  box-sizing: border-box; margin: 0; padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+html, body, #root {
+  height: 100%;
+  background: ${C.bg};
+  color: ${C.text};
+  font-family: 'DM Sans', sans-serif;
+  overflow: hidden;
+}
+::-webkit-scrollbar { display: none; }
+* { scrollbar-width: none; }
+
+.syne { font-family: 'Syne', sans-serif; }
+.mono { font-family: 'DM Mono', monospace; }
+
+.app-shell {
+  position: fixed;
+  inset: 0;
+  max-width: 430px;
+  margin: 0 auto;
+  background: ${C.bg};
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 0 60px rgba(0,0,0,0.8);
+}
+
+.status-bar {
+  height: 48px;
+  background: ${C.bg};
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  flex-shrink: 0;
+  border-bottom: 1px solid ${C.border};
+}
+
+.page-area {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.bottom-nav {
+  height: 68px;
+  background: rgba(14,19,32,0.97);
+  backdrop-filter: blur(24px);
+  border-top: 1px solid ${C.border};
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.nav-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+.nav-icon { font-size: 21px; transition: transform 0.2s; }
+.nav-label { font-size: 10px; font-family: 'DM Sans'; color: ${C.muted}; transition: color 0.2s; letter-spacing: 0.3px; }
+.nav-btn.active .nav-label { color: ${C.accent}; }
+.nav-btn.active .nav-icon { transform: scale(1.2); }
+.nav-dot { width: 4px; height: 4px; border-radius: 50%; background: ${C.accent}; margin-top: 1px; }
+
+.card {
+  background: ${C.card};
+  border: 1px solid ${C.border};
+  border-radius: 20px;
+}
+
+.btn-glow {
+  background: linear-gradient(135deg, ${C.purple}, ${C.accent});
+  border: none;
+  color: #fff;
+  font-family: 'DM Sans';
+  font-weight: 600;
+  font-size: 15px;
+  padding: 14px;
+  border-radius: 14px;
+  cursor: pointer;
+  width: 100%;
+  transition: opacity 0.2s;
+}
+.btn-glow:active { opacity: 0.8; }
+
+.btn-ghost {
+  background: ${C.surface};
+  border: 1.5px solid ${C.border};
+  color: ${C.text};
+  font-family: 'DM Sans';
+  font-size: 13px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-ghost:active { background: ${C.card}; }
+
+.field {
+  background: ${C.surface};
+  border: 1.5px solid ${C.border};
+  color: ${C.text};
+  font-family: 'DM Sans';
+  font-size: 15px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.field:focus { border-color: ${C.accent}; }
+.field::placeholder { color: ${C.muted}; }
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 11px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.pbar { height: 6px; background: ${C.border}; border-radius: 3px; overflow: hidden; }
+.pfill { height: 100%; border-radius: 3px; transition: width 1.2s ease; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fu { animation: fadeUp 0.38s ease both; }
+
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.35; } }
+.pulse { animation: pulse 2s infinite; }
+
+.opt-btn {
+  background: ${C.surface};
+  border: 1.5px solid ${C.border};
+  border-radius: 16px;
+  padding: 16px 18px;
+  width: 100%;
+  font-family: 'DM Sans';
+  font-size: 15px;
+  color: ${C.text};
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.18s;
+}
+.opt-btn.sel {
+  border-color: ${C.accent};
+  background: rgba(61,239,233,0.07);
+  color: ${C.accent};
+}
+.opt-btn:active { transform: scale(0.98); }
+
+.bubble {
+  max-width: 80%;
+  padding: 12px 16px;
+  border-radius: 18px;
+  font-size: 14px;
+  line-height: 1.65;
+  animation: fadeUp 0.3s ease;
+}
+`;
+
+/* ── RING ── */
+const Ring = ({ pct, size = 80, color = C.accent, label, sub }) => {
+  const r = (size - 10) / 2;
+  const circ = 2 * Math.PI * r;
+  return (
+    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:5 }}>
+      <div style={{ position:"relative", width:size, height:size }}>
+        <svg width={size} height={size}>
+          <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={C.border} strokeWidth={7}/>
+          <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={7}
+            strokeDasharray={circ}
+            strokeDashoffset={circ - (pct/100)*circ}
+            strokeLinecap="round"
+            transform={`rotate(-90 ${size/2} ${size/2})`}
+            style={{ transition:"stroke-dashoffset 1.2s ease" }}/>
+        </svg>
+        <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
+          <span style={{ fontSize:size>70?15:12, fontWeight:700, color, fontFamily:"Syne" }}>{pct}%</span>
+          {sub && <span style={{ fontSize:9, color:C.sub }}>{sub}</span>}
+        </div>
+      </div>
+      {label && <span style={{ fontSize:10, color:C.sub, textAlign:"center" }}>{label}</span>}
+    </div>
+  );
+};
+
+/* ── ONBOARDING ── */
+const STEPS = [
+  { id:"type",     q:"Who are you?",             opts:["🎓 Student","💼 Job Seeker","🏢 Working Professional"] },
+  { id:"name",     q:"What's your name?",         input:true, ph:"Your full name" },
+  { id:"field",    q:"Primary interest?",         opts:["💻 Tech & AI","📊 Data Science","🎨 Design & UX","📈 Business","🏥 Healthcare","🔧 Engineering"] },
+  { id:"goal",     q:"Dream job / career goal?",  input:true, ph:"e.g. Data Scientist at Google" },
+  { id:"timeline", q:"Target timeline?",          opts:["3 months","6 months","12 months","2 years","5+ years"] },
+  { id:"budget",   q:"Monthly learning budget?",  opts:["Free only","Under ₹1K","₹1K–5K","₹5K–20K","₹20K+"] },
+];
+
+const Onboarding = ({ onDone }) => {
+  const [step, setStep] = useState(0);
+  const [data, setData] = useState({});
+  const cur = STEPS[step];
+
+  const pick = (val) => {
+    const d = { ...data, [cur.id]: val };
+    setData(d);
+    if (step < STEPS.length - 1) setTimeout(() => setStep(s => s + 1), 160);
+    else onDone(d);
+  };
+
+  return (
+    <div style={{ flex:1, display:"flex", flexDirection:"column", padding:"20px 20px 32px", overflowY:"auto" }}>
+      {/* progress */}
+      <div style={{ display:"flex", gap:4, marginBottom:32 }}>
+        {STEPS.map((_,i) => (
+          <div key={i} style={{ flex:1, height:3, borderRadius:2, background: i<=step ? C.accent : C.border, transition:"background 0.3s" }}/>
+        ))}
+      </div>
+
+      <div className="mono" style={{ fontSize:11, color:C.accent, marginBottom:8 }}>STEP {step+1} / {STEPS.length}</div>
+      <h2 className="syne fu" key={step} style={{ fontSize:26, lineHeight:1.25, marginBottom:28 }}>{cur.q}</h2>
+
+      {cur.opts ? (
+        <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+          {cur.opts.map(o => (
+            <button key={o} className={`opt-btn ${data[cur.id]===o?"sel":""}`} onClick={() => pick(o)}>{o}</button>
+          ))}
+        </div>
+      ) : (
+        <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+          <input className="field" placeholder={cur.ph} value={data[cur.id]||""}
+            onChange={e => setData({...data,[cur.id]:e.target.value})}
+            style={{ fontSize:16, padding:"16px" }} autoFocus/>
+          <button className="btn-glow" onClick={() => pick(data[cur.id]||"")}>
+            {step < STEPS.length-1 ? "Continue →" : "Launch My Navigator 🚀"}
+          </button>
+        </div>
+      )}
+
+      {step > 0 && (
+        <button className="btn-ghost" style={{ marginTop:20 }} onClick={() => setStep(s => s-1)}>← Back</button>
+      )}
+    </div>
+  );
+};
+
+/* ── TOPBAR ── */
+const TopBar = ({ title, right }) => (
+  <div style={{ padding:"14px 20px 10px", display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 }}>
+    <h1 className="syne" style={{ fontSize:21 }}>{title}</h1>
+    {right}
+  </div>
+);
+
+/* ── HOME / DASHBOARD ── */
+const Home = ({ user }) => {
+  const [ready, setReady] = useState(false);
+  useEffect(() => { setTimeout(() => setReady(true), 200); }, []);
+  const first = (user.name||"Navigator").split(" ")[0];
+
+  const schedule = [
+    { t:"7:00 AM",  task:"Python: Data Structures", done:true,  icon:"🐍" },
+    { t:"12:00 PM", task:"SQL – Advanced Joins",    active:true, icon:"🗄️" },
+    { t:"4:00 PM",  task:"Statistics Review",        icon:"📊" },
+    { t:"9:00 PM",  task:"Daily Recap",              icon:"✅" },
+  ];
+
+  return (
+    <div className="scroll" style={{ padding:"0 0 16px" }}>
+      <TopBar title={`Hey ${first} 👋`} right={
+        <div style={{ width:38, height:38, borderRadius:"50%", background:`linear-gradient(135deg,${C.purple},${C.accent})`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:17, fontFamily:"Syne", fontWeight:700, color:"#fff" }}>
+          {(user.name||"U")[0].toUpperCase()}
+        </div>
+      }/>
+
+      <div style={{ padding:"0 16px", display:"flex", flexDirection:"column", gap:16 }}>
+
+        {/* Banner */}
+        <div className="fu" style={{ background:`linear-gradient(135deg,rgba(139,92,246,.35),rgba(61,239,233,.12))`, border:`1px solid rgba(139,92,246,.4)`, borderRadius:24, padding:"22px 20px", position:"relative", overflow:"hidden" }}>
+          <div style={{ position:"absolute", right:14, top:10, fontSize:52, opacity:.1, pointerEvents:"none" }}>🎯</div>
+          <div className="mono" style={{ fontSize:10, color:C.accent, marginBottom:6, letterSpacing:1 }}>CAREER OS</div>
+          <div className="syne" style={{ fontSize:17, marginBottom:3 }}>Goal: <span style={{ color:C.accent }}>{user.goal||"Data Scientist"}</span></div>
+          <div style={{ fontSize:13, color:C.sub, marginBottom:16 }}>{user.timeline||"12 months"} · {user.type||"Student"}</div>
+          <div style={{ display:"flex", gap:10 }}>
+            <button className="btn-glow" style={{ width:"auto", padding:"10px 18px", fontSize:13 }}>Roadmap</button>
+            <button className="btn-ghost" style={{ padding:"10px 16px", fontSize:13 }}>AI Mentor</button>
+          </div>
+        </div>
+
+        {/* Rings */}
+        <div className="card fu" style={{ padding:"20px 12px", animationDelay:"60ms" }}>
+          <div style={{ fontSize:13, fontWeight:600, marginBottom:16, paddingLeft:4 }}>Career Health</div>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:6 }}>
+            <Ring pct={ready?67:0} color={C.accent}  label="Ready"  sub="score"/>
+            <Ring pct={ready?48:0} color={C.purple}  label="Skills" sub="done"/>
+            <Ring pct={ready?72:0} color={C.green}   label="Streak" sub="active"/>
+            <Ring pct={ready?35:0} color={C.amber}   label="Risk"   sub="level"/>
+          </div>
+        </div>
+
+        {/* Today */}
+        <div className="fu" style={{ animationDelay:"110ms" }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+            <span className="syne" style={{ fontSize:16 }}>Today's Plan</span>
+            <span style={{ fontSize:12, color:C.accent }}>4 tasks</span>
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+            {schedule.map((s,i) => (
+              <div key={i} className="card" style={{ padding:"14px 16px", display:"flex", alignItems:"center", gap:14, borderColor: s.active ? C.accent : C.border, background: s.active ? "rgba(61,239,233,0.05)" : C.card }}>
+                <span style={{ fontSize:22 }}>{s.icon}</span>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:14, fontWeight:500, color: s.done ? C.muted : C.text, textDecoration: s.done ? "line-through" : "none" }}>{s.task}</div>
+                  <div style={{ fontSize:12, color: s.active ? C.accent : C.sub, marginTop:2 }}>{s.t}</div>
+                </div>
+                {s.done   && <span style={{ color:C.green, fontSize:18 }}>✓</span>}
+                {s.active && <span className="pulse" style={{ color:C.accent, fontSize:12 }}>●</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Activity */}
+        <div className="card fu" style={{ padding:"18px 16px", animationDelay:"160ms" }}>
+          <div className="syne" style={{ fontSize:16, marginBottom:14 }}>Activity</div>
+          {[
+            { icon:"⚡", txt:"Completed Python Module 3",    t:"2h ago",     c:C.green  },
+            { icon:"⚠️", txt:"Skill Gap: SQL detected",       t:"5h ago",     c:C.amber  },
+            { icon:"🔥", txt:"14-day learning streak!",       t:"Yesterday",  c:C.accent },
+            { icon:"📄", txt:"Resume score updated: 73/100", t:"2 days ago", c:C.purple },
+          ].map((a,i,arr) => (
+            <div key={i} style={{ display:"flex", gap:12, alignItems:"center", padding:"11px 0", borderBottom: i<arr.length-1?`1px solid ${C.border}`:"none" }}>
+              <div style={{ width:36, height:36, borderRadius:11, background:C.surface, display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, flexShrink:0 }}>{a.icon}</div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:13 }}>{a.txt}</div>
+                <div style={{ fontSize:11, color:C.sub, marginTop:1 }}>{a.t}</div>
+              </div>
+              <div style={{ width:6, height:6, borderRadius:"50%", background:a.c, flexShrink:0 }}/>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ── ROADMAP ── */
+const Roadmap = ({ user }) => {
+  const phases = [
+    { n:1, title:"Foundation",    dur:"0–3 months",  st:"active",   steps:["Python Basics","Math for DS","Excel","Basic SQL"] },
+    { n:2, title:"Core Skills",   dur:"3–6 months",  st:"upcoming", steps:["Advanced SQL","Statistics","Data Viz","EDA"] },
+    { n:3, title:"ML & Projects", dur:"6–9 months",  st:"upcoming", steps:["ML Algorithms","Scikit-learn","2 Projects","Kaggle"] },
+    { n:4, title:"Job Ready",     dur:"9–12 months", st:"upcoming", steps:["Portfolio","Resume","Interviews","Apply 50+"] },
+  ];
+  const sc = {
+    done:    { border:C.green,  dot:C.green,  bg:"rgba(34,197,94,0.07)"  },
+    active:  { border:C.accent, dot:C.accent, bg:"rgba(61,239,233,0.06)" },
+    upcoming:{ border:C.border, dot:C.muted,  bg:"transparent"           },
+  };
+
+  return (
+    <div className="scroll" style={{ padding:"0 0 16px" }}>
+      <TopBar title="Roadmap" right={<span className="mono" style={{ fontSize:11, color:C.accent }}>{user.timeline||"12 months"}</span>}/>
+      <div style={{ padding:"0 16px" }}>
+        <div style={{ fontSize:13, color:C.sub, marginBottom:18 }}>Path to: <strong style={{ color:C.text }}>{user.goal||"Data Scientist"}</strong></div>
+        {phases.map((p,i) => {
+          const s = sc[p.st];
+          return (
+            <div key={i} style={{ display:"flex", gap:12, marginBottom:14 }} className="fu" style={{ animationDelay:`${i*60}ms` }}>
+              <div style={{ display:"flex", flexDirection:"column", alignItems:"center", width:38, flexShrink:0 }}>
+                <div style={{ width:38, height:38, borderRadius:11, border:`2px solid ${s.dot}`, background:s.bg, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"Syne", fontWeight:700, fontSize:15, color:s.dot }}>{p.n}</div>
+                {i < phases.length-1 && <div style={{ width:2, flex:1, minHeight:16, background:s.dot, opacity:.25, marginTop:4 }}/>}
+              </div>
+              <div style={{ flex:1, border:`1px solid ${s.border}`, background:s.bg, borderRadius:20, padding:"16px 16px 18px", marginBottom: i<phases.length-1?16:0 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                  <div>
+                    <div className="mono" style={{ fontSize:10, color:s.dot, marginBottom:3 }}>{p.dur}</div>
+                    <div className="syne" style={{ fontSize:16 }}>{p.title}</div>
+                  </div>
+                  {p.st==="active" && <span className="chip pulse" style={{ background:"rgba(61,239,233,.14)", color:C.accent, fontSize:10 }}>● NOW</span>}
+                </div>
+                <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                  {p.steps.map(st => (
+                    <span key={st} className="chip" style={{ background:C.surface, color:C.sub, border:`1px solid ${C.border}` }}>{st}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+/* ── AI MENTOR ── */
+const Mentor = ({ user }) => {
+  const first = (user.name||"there").split(" ")[0];
+  const [msgs, setMsgs] = useState([
+    { r:"ai", t:`Hi ${first}! 👋 I'm your AI career mentor. Your goal is to become a ${user.goal||"Data Scientist"} in ${user.timeline||"12 months"}. What can I help with today?` }
+  ]);
+  const [inp, setInp] = useState("");
+  const [loading, setLoading] = useState(false);
+  const endRef = useRef();
+  const qs = ["What to learn first?","Am I on track?","Motivate me 💪","Jobs I can apply now?"];
+
+  const send = async (txt) => {
+    const msg = txt || inp.trim();
+    if (!msg) return;
+    setInp("");
+    setMsgs(p => [...p, { r:"user", t:msg }]);
+    setLoading(true);
+    try {
+      const history = msgs.map(m => ({ role: m.r==="ai"?"assistant":"user", content: m.t }));
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({
+          model:"claude-sonnet-4-20250514",
+          max_tokens:500,
+          system:`You are an expert AI Career Mentor. User: Name=${user.name}, Type=${user.type||"Student"}, Goal=${user.goal||"Data Scientist"}, Timeline=${user.timeline||"12 months"}, Budget=${user.budget||"moderate"}, Field=${user.field||"Tech"}. Give short, warm, practical advice in 2-3 sentences. Use max 1 emoji.`,
+          messages:[...history,{ role:"user", content:msg }]
+        })
+      });
+      const d = await res.json();
+      setMsgs(p => [...p, { r:"ai", t: d.content?.[0]?.text || "Let me think... try again?" }]);
+    } catch {
+      setMsgs(p => [...p, { r:"ai", t:"Connection issue. Please retry." }]);
+    }
+    setLoading(false);
+    setTimeout(() => endRef.current?.scrollIntoView({ behavior:"smooth" }), 100);
+  };
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", height:"100%", overflow:"hidden" }}>
+      <TopBar title="AI Mentor" right={
+        <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+          <div className="pulse" style={{ width:7, height:7, borderRadius:"50%", background:C.green }}/>
+          <span style={{ fontSize:12, color:C.sub }}>Online</span>
+        </div>
+      }/>
+
+      <div style={{ flex:1, overflowY:"auto", padding:"8px 16px 8px", display:"flex", flexDirection:"column", gap:14 }}>
+        {msgs.map((m,i) => (
+          <div key={i} style={{ display:"flex", justifyContent: m.r==="user"?"flex-end":"flex-start", gap:10, alignItems:"flex-end" }}>
+            {m.r==="ai" && (
+              <div style={{ width:32, height:32, borderRadius:10, background:`linear-gradient(135deg,${C.purple},${C.accent})`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, flexShrink:0 }}>🤖</div>
+            )}
+            <div className="bubble" style={{
+              background: m.r==="user" ? `linear-gradient(135deg,${C.purple},${C.purple}cc)` : C.card,
+              border: m.r==="ai" ? `1px solid ${C.border}` : "none",
+              borderBottomRightRadius: m.r==="user" ? 4 : 18,
+              borderBottomLeftRadius:  m.r==="ai"  ? 4 : 18,
+            }}>{m.t}</div>
+          </div>
+        ))}
+        {loading && (
+          <div style={{ display:"flex", gap:10, alignItems:"flex-end" }}>
+            <div style={{ width:32, height:32, borderRadius:10, background:`linear-gradient(135deg,${C.purple},${C.accent})`, display:"flex", alignItems:"center", justifyContent:"center" }}>🤖</div>
+            <div className="bubble" style={{ background:C.card, border:`1px solid ${C.border}` }}>
+              <span className="pulse" style={{ color:C.sub }}>● ● ●</span>
+            </div>
+          </div>
+        )}
+        <div ref={endRef}/>
+      </div>
+
+      <div style={{ padding:"8px 16px", display:"flex", gap:7, overflowX:"auto", borderTop:`1px solid ${C.border}` }}>
+        {qs.map(q => (
+          <button key={q} className="btn-ghost" style={{ fontSize:12, padding:"7px 13px", whiteSpace:"nowrap" }} onClick={() => send(q)}>{q}</button>
+        ))}
+      </div>
+
+      <div style={{ padding:"10px 16px 14px", display:"flex", gap:10 }}>
+        <input className="field" placeholder="Ask your mentor..." value={inp}
+          onChange={e => setInp(e.target.value)}
+          onKeyDown={e => e.key==="Enter" && send()}
+          style={{ flex:1 }}/>
+        <button className="btn-glow" style={{ width:"auto", padding:"0 18px", fontSize:18 }} onClick={() => send()}>➤</button>
+      </div>
+    </div>
+  );
+};
+
+/* ── JOBS ── */
+const Jobs = () => {
+  const [filter, setFilter] = useState("All");
+  const jobs = [
+    { title:"Junior Data Analyst", company:"Flipkart",  loc:"Bangalore", sal:"₹6–9 LPA",  match:82, type:"Full-time",  tags:["SQL","Excel","Python"], icon:"🛒" },
+    { title:"Data Science Intern", company:"Paytm",     loc:"Remote",    sal:"₹25K/mo",   match:91, type:"Internship", tags:["Python","ML"],          icon:"💳" },
+    { title:"Business Analyst",    company:"Accenture", loc:"Pune",      sal:"₹7–11 LPA", match:75, type:"Full-time",  tags:["SQL","Tableau"],        icon:"🌐" },
+    { title:"ML Trainee",          company:"Infosys",   loc:"Hyderabad", sal:"₹5–7 LPA",  match:60, type:"Full-time",  tags:["Python","TF"],          icon:"🔵" },
+    { title:"Freelance Analyst",   company:"Upwork",    loc:"Remote",    sal:"$15–35/hr", match:78, type:"Freelance",  tags:["SQL","Power BI"],       icon:"💻" },
+  ];
+  const tc = { "Full-time":C.accent, "Internship":C.green, "Freelance":C.pink };
+  const filtered = filter==="All" ? jobs : jobs.filter(j => j.type===filter);
+
+  return (
+    <div className="scroll" style={{ padding:"0 0 16px" }}>
+      <TopBar title="Jobs" right={<span style={{ fontSize:12, color:C.sub }}>{jobs.length} matches</span>}/>
+      <div style={{ padding:"0 16px", display:"flex", flexDirection:"column", gap:14 }}>
+        <input className="field" placeholder="🔍  Search jobs, companies..."/>
+
+        <div style={{ display:"flex", gap:7, overflowX:"auto", paddingBottom:2 }}>
+          {["All","Full-time","Internship","Freelance"].map(f => (
+            <button key={f} onClick={() => setFilter(f)} style={{ padding:"8px 16px", borderRadius:99, border:`1px solid ${filter===f?C.accent:C.border}`, background: filter===f?"rgba(61,239,233,.1)":C.surface, color: filter===f?C.accent:C.sub, fontSize:12, cursor:"pointer", whiteSpace:"nowrap", fontFamily:"DM Sans", transition:"all 0.2s" }}>{f}</button>
+          ))}
+        </div>
+
+        {filtered.map((j,i) => (
+          <div key={i} className={`card fu`} style={{ padding:18, animationDelay:`${i*50}ms` }}>
+            <div style={{ display:"flex", gap:12, marginBottom:12 }}>
+              <div style={{ width:44, height:44, borderRadius:13, background:C.surface, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}>{j.icon}</div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:15, fontWeight:600 }}>{j.title}</div>
+                <div style={{ fontSize:12, color:C.sub }}>{j.company} · {j.loc}</div>
+              </div>
+              <div style={{ textAlign:"right" }}>
+                <div style={{ fontSize:15, fontWeight:700, color: j.match>=80?C.green:C.accent, fontFamily:"Syne" }}>{j.match}%</div>
+                <div style={{ fontSize:10, color:C.sub }}>match</div>
+              </div>
+            </div>
+
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+              <span style={{ fontSize:14, fontWeight:600, color:C.green }}>{j.sal}</span>
+              <span className="chip" style={{ background:`${tc[j.type]}18`, color:tc[j.type] }}>{j.type}</span>
+            </div>
+
+            <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:14 }}>
+              {j.tags.map(t => <span key={t} className="chip" style={{ background:C.surface, color:C.sub, border:`1px solid ${C.border}` }}>{t}</span>)}
+            </div>
+
+            <div style={{ marginBottom:14 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", fontSize:12, color:C.sub, marginBottom:5 }}>
+                <span>AI Match</span><span style={{ color: j.match>=80?C.green:C.accent, fontWeight:600 }}>{j.match}%</span>
+              </div>
+              <div className="pbar"><div className="pfill" style={{ width:`${j.match}%`, background: j.match>=80?C.green:C.accent }}/></div>
+            </div>
+
+            <div style={{ display:"flex", gap:10 }}>
+              <button className="btn-glow" style={{ flex:1, fontSize:14, padding:"12px" }}>Apply Now</button>
+              <button className="btn-ghost" style={{ padding:"12px 14px" }}>🔖</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+/* ── MORE (Courses + Focus) ── */
+const More = ({ user }) => {
+  const [tab, setTab] = useState("courses");
+  const courses = [
+    { title:"Python for Data Science", provider:"Coursera",    price:"₹1,499/mo", match:95, rating:"4.8", icon:"🐍", free:false },
+    { title:"SQL Masterclass",         provider:"Udemy",       price:"₹499",      match:92, rating:"4.7", icon:"🗄️", free:false },
+    { title:"Statistics (Free)",       provider:"Khan Academy",price:"Free",      match:85, rating:"4.9", icon:"📐", free:true  },
+    { title:"Data Analyst Bootcamp",   provider:"DataCamp",    price:"₹1,299/mo", match:88, rating:"4.5", icon:"📊", free:false },
+  ];
+  const apps = [
+    { name:"Instagram", icon:"📸", today:2.5, limit:1,   color:C.pink   },
+    { name:"YouTube",   icon:"▶️", today:1.8, limit:1.5, color:C.red    },
+    { name:"Gaming",    icon:"🎮", today:0.5, limit:0.5, color:C.purple },
+    { name:"WhatsApp",  icon:"💬", today:0.8, limit:1,   color:C.green  },
+  ];
+  const total = apps.reduce((s,a) => s+a.today, 0);
+
+  return (
+    <div className="scroll" style={{ padding:"0 0 16px" }}>
+      <TopBar title="Explore"/>
+      <div style={{ padding:"0 16px", display:"flex", flexDirection:"column", gap:14 }}>
+
+        {/* tab switcher */}
+        <div style={{ display:"flex", gap:3, background:C.surface, borderRadius:14, padding:4 }}>
+          {[{id:"courses",l:"📚 Courses"},{id:"focus",l:"📵 Focus Tracker"}].map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)} style={{ flex:1, padding:"10px", border:"none", borderRadius:11, background: tab===t.id?C.card:"transparent", color: tab===t.id?C.text:C.sub, fontFamily:"DM Sans", fontSize:13, fontWeight: tab===t.id?600:400, cursor:"pointer", transition:"all 0.2s" }}>{t.l}</button>
+          ))}
+        </div>
+
+        {tab==="courses" && (
+          <>
+            <div style={{ fontSize:13, color:C.sub }}>Budget: <strong style={{ color:C.text }}>{user.budget||"₹1K–5K"}</strong> · AI-matched to your gaps</div>
+            {courses.map((c,i) => (
+              <div key={i} className="card fu" style={{ padding:18, animationDelay:`${i*50}ms` }}>
+                <div style={{ display:"flex", gap:12, marginBottom:12 }}>
+                  <span style={{ fontSize:28 }}>{c.icon}</span>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:15, fontWeight:600 }}>{c.title}</div>
+                    <div style={{ fontSize:12, color:C.sub }}>{c.provider}</div>
+                  </div>
+                  <div style={{ textAlign:"right" }}>
+                    <div style={{ fontSize:14, fontWeight:700, color: c.free?C.green:C.text }}>{c.price}</div>
+                    <div style={{ fontSize:11, color:C.sub }}>⭐ {c.rating}</div>
+                  </div>
+                </div>
+                <div style={{ marginBottom:14 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", fontSize:12, color:C.sub, marginBottom:5 }}>
+                    <span>AI Match</span><span style={{ color:C.accent, fontWeight:600 }}>{c.match}%</span>
+                  </div>
+                  <div className="pbar"><div className="pfill" style={{ width:`${c.match}%`, background:C.accent }}/></div>
+                </div>
+                <button className="btn-glow" style={{ fontSize:14, padding:"12px" }}>Enroll Now</button>
+              </div>
+            ))}
+          </>
+        )}
+
+        {tab==="focus" && (
+          <>
+            {total > 3 && (
+              <div style={{ background:"rgba(244,63,94,.08)", border:`1px solid rgba(244,63,94,.3)`, borderRadius:20, padding:18 }}>
+                <div style={{ fontSize:14, fontWeight:700, color:C.red, marginBottom:6 }}>⚠ Career Risk Alert</div>
+                <div style={{ fontSize:13, color:C.text, lineHeight:1.6 }}>
+                  <strong>{total.toFixed(1)}h</strong> on distractions today — timeline risk up <strong style={{ color:C.red }}>{Math.round(total*8)}%</strong>. Reduce screen time to stay on track.
+                </div>
+              </div>
+            )}
+
+            <div className="card" style={{ padding:18, display:"flex", justifyContent:"space-around", alignItems:"center" }}>
+              <Ring pct={Math.min(Math.round((total/8)*100),100)} color={C.red} size={90} label="Distraction" sub="today"/>
+              <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                <div>
+                  <div style={{ fontSize:11, color:C.sub }}>Study time</div>
+                  <div className="syne" style={{ fontSize:22, color:C.green }}>3.5h</div>
+                </div>
+                <div>
+                  <div style={{ fontSize:11, color:C.sub }}>Wasted</div>
+                  <div className="syne" style={{ fontSize:22, color:C.red }}>{total.toFixed(1)}h</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="card" style={{ padding:18 }}>
+              <div className="syne" style={{ fontSize:16, marginBottom:16 }}>App Usage Today</div>
+              {apps.map((a,i) => (
+                <div key={i} style={{ marginBottom:18 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", marginBottom:7 }}>
+                    <div style={{ display:"flex", gap:9, alignItems:"center" }}>
+                      <span style={{ fontSize:20 }}>{a.icon}</span>
+                      <span style={{ fontSize:14, fontWeight:500 }}>{a.name}</span>
+                    </div>
+                    <span style={{ fontSize:14, fontWeight:700, color: a.today>a.limit?C.red:C.green }}>{a.today}h <span style={{ fontSize:11, color:C.sub }}>/ {a.limit}h</span></span>
+                  </div>
+                  <div className="pbar"><div className="pfill" style={{ width:`${Math.min((a.today/a.limit)*100,100)}%`, background: a.today>a.limit?C.red:a.color }}/></div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
+/* ── SKILL GAP ── */
+const SkillGap = ({ user }) => {
+  const skills = [
+    { name:"Python",           cur:65, req:90, st:"progress" },
+    { name:"SQL",              cur:20, req:85, st:"gap"      },
+    { name:"Machine Learning", cur:10, req:80, st:"gap"      },
+    { name:"Statistics",       cur:50, req:75, st:"progress" },
+    { name:"Data Viz",         cur:35, req:70, st:"gap"      },
+    { name:"Excel",            cur:80, req:60, st:"done"     },
+  ];
+  const sc = { gap:C.red, progress:C.accent, done:C.green };
+  const sl = { gap:"Gap", progress:"Learning", done:"Done" };
+
+  return (
+    <div className="scroll" style={{ padding:"0 0 16px" }}>
+      <TopBar title="Skill Gap" right={<span className="chip" style={{ background:"rgba(244,63,94,.14)", color:C.red }}>3 gaps</span>}/>
+      <div style={{ padding:"0 16px", display:"flex", flexDirection:"column", gap:14 }}>
+
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10 }}>
+          {[[3,C.red,"Gaps"],[2,C.accent,"Learning"],[1,C.green,"Done"]].map(([v,c,l],i) => (
+            <div key={i} className="card" style={{ padding:"14px 10px", textAlign:"center" }}>
+              <div className="syne" style={{ fontSize:22, color:c }}>{v}</div>
+              <div style={{ fontSize:11, color:C.sub }}>{l}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ fontSize:13, color:C.sub }}>Target: <strong style={{ color:C.text }}>{user.goal||"Data Scientist"}</strong></div>
+
+        <div className="card" style={{ padding:"18px 16px" }}>
+          {skills.map((s,i) => (
+            <div key={i} style={{ marginBottom: i<skills.length-1?20:0 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
+                <span style={{ fontSize:14, fontWeight:500 }}>{s.name}</span>
+                <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                  <span style={{ fontSize:11, color:C.sub }}>{s.cur}%→{s.req}%</span>
+                  <span className="chip" style={{ background:`${sc[s.st]}18`, color:sc[s.st] }}>{sl[s.st]}</span>
+                </div>
+              </div>
+              <div className="pbar" style={{ position:"relative" }}>
+                <div style={{ position:"absolute", left:0, top:0, height:"100%", width:`${s.req}%`, background:`${sc[s.st]}22`, borderRadius:3 }}/>
+                <div className="pfill" style={{ width:`${s.cur}%`, background:sc[s.st] }}/>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ background:"rgba(244,63,94,.07)", border:`1px solid rgba(244,63,94,.25)`, borderRadius:20, padding:18 }}>
+          <div style={{ fontSize:14, fontWeight:600, color:C.red, marginBottom:12 }}>⚠ Priority Skills</div>
+          {["SQL","Machine Learning","Data Visualization"].map(s => (
+            <div key={s} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 0", borderBottom:`1px solid rgba(244,63,94,.12)` }}>
+              <span style={{ fontSize:14 }}>{s}</span>
+              <button className="btn-ghost" style={{ fontSize:12, padding:"6px 14px" }}>Start →</button>
+            </div>
+          ))}
+          <button className="btn-glow" style={{ marginTop:14, fontSize:14, padding:"12px" }}>Get Full Learning Plan</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ── NAV CONFIG ── */
+const NAV = [
+  { id:"home",     label:"Home",    icon:"🏠" },
+  { id:"roadmap",  label:"Roadmap", icon:"🗺️" },
+  { id:"mentor",   label:"Mentor",  icon:"🤖" },
+  { id:"jobs",     label:"Jobs",    icon:"💼" },
+  { id:"more",     label:"More",    icon:"⚡" },
+];
+
+/* ── ROOT ── */
+export default function App() {
+  const [user, setUser] = useState(null);
+  const [tab,  setTab]  = useState("home");
+
+  const render = () => {
+    const p = { user };
+    switch(tab){
+      case "home":    return <Home     {...p}/>;
+      case "roadmap": return <Roadmap  {...p}/>;
+      case "mentor":  return <Mentor   {...p}/>;
+      case "jobs":    return <Jobs/>;
+      case "more":    return <More     {...p}/>;
+      default:        return <Home     {...p}/>;
+    }
+  };
+
+  if (!user) return (
+    <>
+      <style>{css}</style>
+      <div className="app-shell"><Onboarding onDone={setUser}/></div>
+    </>
+  );
+
+  return (
+    <>
+      <style>{css}</style>
+      <div className="app-shell">
+        {/* fake status bar */}
+        <div className="status-bar">
+          <span className="mono" style={{ fontSize:13, color:C.sub }}>9:41</span>
+          <span className="mono" style={{ fontSize:11, color:C.accent, letterSpacing:1 }}>CAREERWISE AI</span>
+          <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+            <div className="pulse" style={{ width:6, height:6, borderRadius:"50%", background:C.green }}/>
+            <span style={{ fontSize:14 }}>🔋</span>
+          </div>
+        </div>
+
+        {/* page */}
+        <div className="page-area" key={tab}>
+          {render()}
+        </div>
+
+        {/* bottom nav */}
+        <div className="bottom-nav">
+          {NAV.map(n => (
+            <button key={n.id} className={`nav-btn ${tab===n.id?"active":""}`} onClick={() => setTab(n.id)}>
+              <span className="nav-icon">{n.icon}</span>
+              <span className="nav-label">{n.label}</span>
+              {tab===n.id && <div className="nav-dot"/>}
+            </button>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
